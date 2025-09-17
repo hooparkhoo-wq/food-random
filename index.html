@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>오늘뭐먹지 - 배달음식 랜덤 추천</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f7;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 스플래시 화면 */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeOut 0.5s ease-in-out 2s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+            }
+        }
+
+        .splash-logo {
+            font-size: 60px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        .splash-title {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .splash-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* 메인 앱 */
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.1);
+        }
+
+        /* 헤더 */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .app-title {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .menu-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 주소 입력 */
+        .address-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .address-input {
+            flex: 1;
+            background: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .location-btn {
+            background: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .location-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* 탭 네비게이션 */
+        .tab-nav {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 108px;
+            z-index: 99;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #666;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #667eea;
+        }
+
+        /* 탭 컨텐츠 */
+        .tab-content {
+            display: none;
+            padding: 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 카테고리 선택 */
+        .category-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .category-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .category-card.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            color: white;
+        }
+
+        .category-icon {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .category-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 랜덤 버튼 */
+        .random-section {
+            position: sticky;
+            bottom: 20px;
+            padding: 0 20px 20px;
+            background: linear-gradient(to top, white 80%, transparent);
+        }
+
+        .random-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .random-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .random-btn:active {
+            transform: translateY(0);
+        }
+
+        .random-btn.spinning {
+            animation: pulse 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.98); }
+        }
+
+        /* 결과 모달 */
+        .result-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .result-modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .restaurant-result {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .result-emoji {
+            font-size: 60px;
+            animation: bounce 1s ease-in-out;
+        }
+
+        .restaurant-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 15px 0 10px;
+        }
+
+        .restaurant-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .info-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .info-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .menu-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .menu-title {
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .menu-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-name {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .menu-price {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 히스토리 */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-restaurant {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .history-details {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .history-time {
+            color: #999;
+            font-size: 12px;
+        }
+
+        /* 즐겨찾기 */
+        .favorite-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .favorite-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .favorite-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .favorite-emoji {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .favorite-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .favorite-category {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 빈 상태 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 16px;
+        }
+
+        /* 사이드 메뉴 */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100%;
+            background: white;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            z-index: 2000;
+        }
+
+        .side-menu.open {
+            right: 0;
+        }
+
+        .menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+        }
+
+        .menu-overlay.show {
+            display: block;
+        }
+
+        .menu-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: white;
+        }
+
+        .menu-items {
+            padding: 20px;
+        }
+
+        .menu-item-btn {
+            width: 100%;
+            padding: 15px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 16px;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item-btn:hover {
+            background: #f0f0f0;
+        }
+
+        /* 반응형 */
+        @media (max-width: 600px) {
+            .app-container {
+                max-width: 100%;
+            }
+            
+            .category-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .category-card {
+                padding: 12px 8px;
+            }
+            
+            .category-icon {
+                font-size: 24px;
+            }
+            
+            .category-name {
+                font-size: 12px;
+            }
+        }
+
+        /* 로딩 스피너 */
+        .spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 스플래시 화면 -->
+    <div class="splash-screen">
+        <div class="splash-logo">🍜</div>
+        <div class="splash-title">오늘뭐먹지</div>
+        <div class="splash-subtitle">배달음식 랜덤 추천 서비스</div>
+    </div>
+
+    <!-- 메인 앱 -->
+    <div class="app-container">
+        <!-- 헤더 -->
+        <header class="app-header">
+            <div class="header-top">
+                <div class="app-title">
+                    <span>🍜</span>
+                    <span>오늘뭐먹지</span>
+                </div>
+                <button class="menu-btn" onclick="toggleMenu()">☰</button>
+            </div>
+            <div class="address-container">
+                <input type="text" class="address-input" id="addressInput" placeholder="배달받을 주소를 입력하세요" value="강남대로 79길 42">
+                <button class="location-btn" onclick="getCurrentLocation()">📍</button>
+            </div>
+        </header>
+
+        <!-- 탭 네비게이션 -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('random')">🎲 랜덤추천</button>
+            <button class="tab-btn" onclick="switchTab('history')">📝 히스토리</button>
+            <button class="tab-btn" onclick="switchTab('favorites')">⭐ 즐겨찾기</button>
+        </div>
+
+        <!-- 랜덤 추천 탭 -->
+        <div class="tab-content active" id="random-tab">
+            <div class="category-section">
+                <h3 class="section-title">어떤 종류가 좋으세요?</h3>
+                <div class="category-grid">
+                    <div class="category-card" data-category="korean" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍚</div>
+                        <div class="category-name">한식</div>
+                    </div>
+                    <div class="category-card" data-category="chinese" onclick="toggleCategory(this)">
+                        <div class="category-icon">🥟</div>
+                        <div class="category-name">중식</div>
+                    </div>
+                    <div class="category-card" data-category="japanese" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍱</div>
+                        <div class="category-name">일식</div>
+                    </div>
+                    <div class="category-card" data-category="western" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍝</div>
+                        <div class="category-name">양식</div>
+                    </div>
+                    <div class="category-card" data-category="chicken" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍗</div>
+                        <div class="category-name">치킨</div>
+                    </div>
+                    <div class="category-card" data-category="pizza" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍕</div>
+                        <div class="category-name">피자</div>
+                    </div>
+                    <div class="category-card" data-category="burger" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍔</div>
+                        <div class="category-name">버거</div>
+                    </div>
+                    <div class="category-card" data-category="asian" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍜</div>
+                        <div class="category-name">아시안</div>
+                    </div>
+                    <div class="category-card" data-category="cafe" onclick="toggleCategory(this)">
+                        <div class="category-icon">☕</div>
+                        <div class="category-name">카페</div>
+                    </div>
+                    <div class="category-card" data-category="snack" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍿</div>
+                        <div class="category-name">분식</div>
+                    </div>
+                    <div class="category-card" data-category="dessert" onclick="toggleCategory(this)">
+                        <div class="category-icon">🍰</div>
+                        <div class="category-name">디저트</div>
+                    </div>
+                    <div class="category-card" data-category="midnight" onclick="toggleCategory(this)">
+                        <div class="category-icon">🌙</div>
+                        <div class="category-name">야식</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-section">
+                <h3 class="section-title">가격대</h3>
+                <div class="category-grid">
+                    <div class="category-card" data-price="low" onclick="togglePrice(this)">
+                        <div class="category-icon">💰</div>
+                        <div class="category-name">~15,000</div>
+                    </div>
+                    <div class="category-card" data-price="mid" onclick="togglePrice(this)">
+                        <div class="category-icon">💰💰</div>
+                        <div class="category-name">15,000~25,000</div>
+                    </div>
+                    <div class="category-card" data-price="high" onclick="togglePrice(this)">
+                        <div class="category-icon">💰💰💰</div>
+                        <div class="category-name">25,000~</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 히스토리 탭 -->
+        <div class="tab-content" id="history-tab">
+            <div id="historyList" class="history-list"></div>
+        </div>
+
+        <!-- 즐겨찾기 탭 -->
+        <div class="tab-content" id="favorites-tab">
+            <div id="favoritesList" class="favorite-grid"></div>
+        </div>
+
+        <!-- 랜덤 버튼 -->
+        <div class="random-section">
+            <button class="random-btn" id="randomBtn" onclick="getRandomRestaurant()">
+                <span>🎲</span>
+                <span>오늘의 메뉴 정하기!</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 결과 모달 -->
+    <div class="result-modal" id="resultModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeModal()">✕</button>
+                <h2>🎉 오늘의 추천 메뉴</h2>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- 사이드 메뉴 -->
+    <div class="menu-overlay" onclick="toggleMenu()"></div>
+    <div class="side-menu" id="sideMenu">
+        <div class="menu-header">
+            <h3>메뉴</h3>
+        </div>
+        <div class="menu-items">
+            <button class="menu-item-btn" onclick="shareApp()">
+                <span>📤</span>
+                <span>앱 공유하기</span>
+            </button>
+            <button class="menu-item-btn" onclick="clearHistory()">
+                <span>🗑️</span>
+                <span>히스토리 삭제</span>
+            </button>
+            <button class="menu-item-btn" onclick="clearFavorites()">
+                <span>⭐</span>
+                <span>즐겨찾기 초기화</span>
+            </button>
+            <button class="menu-item-btn" onclick="showAbout()">
+                <span>ℹ️</span>
+                <span>앱 정보</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let selectedCategories = [];
+        let selectedPrice = null;
+        let history = JSON.parse(localStorage.getItem('foodHistory') || '[]');
+        let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+
+        // 레스토랑 데이터 (확장된 버전)
+        const restaurants = [
+            // 한식
+            { name: "본죽&비빔밥", category: "korean", emoji: "🍚", rating: 4.5, deliveryTime: "25-35분", deliveryFee: 2000, minOrder: 12000, priceRange: "low",
+              menu: [{ name: "전복죽", price: 13000 }, { name: "야채비빔밥", price: 9000 }, { name: "낙지김치죽", price: 10000 }] },
+            { name: "명동칼국수", category: "korean", emoji: "🍜", rating: 4.6, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 15000, priceRange: "low",
+              menu: [{ name: "바지락칼국수", price: 9000 }, { name: "김치말이국수", price: 9000 }, { name: "만두", price: 8000 }] },
+            { name: "한솥도시락", category: "korean", emoji: "🍱", rating: 4.3, deliveryTime: "20-30분", deliveryFee: 2000, minOrder: 10000, priceRange: "low",
+              menu: [{ name: "빅치킨마요", price: 4700 }, { name: "돈까스도련님", price: 5800 }, { name: "참치야채비빔밥", price: 5500 }] },
+            { name: "백채김치찌개", category: "korean", emoji: "🍲", rating: 4.4, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 18000, priceRange: "mid",
+              menu: [{ name: "김치찌개", price: 8000 }, { name: "된장찌개", price: 8000 }, { name: "제육볶음", price: 12000 }] },
+            
+            // 중식
+            { name: "홍콩반점", category: "chinese", emoji: "🥟", rating: 4.4, deliveryTime: "35-45분", deliveryFee: 3000, minOrder: 15000, priceRange: "mid",
+              menu: [{ name: "짜장면", price: 7000 }, { name: "짬뽕", price: 8000 }, { name: "탕수육(소)", price: 18000 }] },
+            { name: "진짜루", category: "chinese", emoji: "🍜", rating: 4.5, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 20000, priceRange: "mid",
+              menu: [{ name: "진짜루짬뽕", price: 9000 }, { name: "유니짜장", price: 8000 }, { name: "깐풍기", price: 22000 }] },
+            
+            // 일식
+            { name: "스시로", category: "japanese", emoji: "🍣", rating: 4.7, deliveryTime: "40-50분", deliveryFee: 3000, minOrder: 20000, priceRange: "mid",
+              menu: [{ name: "모듬초밥 12p", price: 15000 }, { name: "연어초밥 세트", price: 18000 }, { name: "우동", price: 7000 }] },
+            { name: "미소야", category: "japanese", emoji: "🍜", rating: 4.5, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 15000, priceRange: "low",
+              menu: [{ name: "미소라멘", price: 11000 }, { name: "돈코츠라멘", price: 12000 }, { name: "차슈덮밥", price: 10000 }] },
+            
+            // 양식
+            { name: "매드포갈릭", category: "western", emoji: "🍝", rating: 4.6, deliveryTime: "40-50분", deliveryFee: 3000, minOrder: 25000, priceRange: "high",
+              menu: [{ name: "갈릭스테이크필라프", price: 28000 }, { name: "갈릭알리오올리오", price: 15000 }, { name: "갈릭스노우피자", price: 22000 }] },
+            { name: "빕스프리미어", category: "western", emoji: "🥩", rating: 4.5, deliveryTime: "45-55분", deliveryFee: 3500, minOrder: 30000, priceRange: "high",
+              menu: [{ name: "안심스테이크", price: 38000 }, { name: "해산물파스타", price: 22000 }, { name: "시저샐러드", price: 15000 }] },
+            
+            // 치킨
+            { name: "교촌치킨", category: "chicken", emoji: "🍗", rating: 4.5, deliveryTime: "35-45분", deliveryFee: 3000, minOrder: 18000, priceRange: "mid",
+              menu: [{ name: "교촌오리지널", price: 20000 }, { name: "교촌허니콤보", price: 21000 }, { name: "교촌레드콤보", price: 21000 }] },
+            { name: "BBQ", category: "chicken", emoji: "🍗", rating: 4.4, deliveryTime: "30-40분", deliveryFee: 3000, minOrder: 18000, priceRange: "mid",
+              menu: [{ name: "황금올리브치킨", price: 20000 }, { name: "자메이카소떡만나", price: 23000 }, { name: "크런치치킨", price: 21000 }] },
+            { name: "BHC", category: "chicken", emoji: "🍗", rating: 4.6, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 17000, priceRange: "mid",
+              menu: [{ name: "뿌링클", price: 20000 }, { name: "맵스터", price: 20000 }, { name: "후라이드", price: 17000 }] },
+            
+            // 피자
+            { name: "도미노피자", category: "pizza", emoji: "🍕", rating: 4.3, deliveryTime: "30-40분", deliveryFee: 3000, minOrder: 15000, priceRange: "mid",
+              menu: [{ name: "슈퍼슈프림 L", price: 29000 }, { name: "포테이토 L", price: 27000 }, { name: "불고기 L", price: 26000 }] },
+            { name: "피자헛", category: "pizza", emoji: "🍕", rating: 4.2, deliveryTime: "35-45분", deliveryFee: 3000, minOrder: 20000, priceRange: "high",
+              menu: [{ name: "슈퍼슈프림 L", price: 28000 }, { name: "치즈킹 L", price: 30000 }, { name: "페퍼로니 L", price: 25000 }] },
+            
+            // 버거
+            { name: "버거킹", category: "burger", emoji: "🍔", rating: 4.2, deliveryTime: "25-35분", deliveryFee: 3000, minOrder: 12000, priceRange: "low",
+              menu: [{ name: "와퍼세트", price: 10500 }, { name: "몬스터와퍼세트", price: 13500 }, { name: "통새우와퍼세트", price: 11500 }] },
+            { name: "쉑쉑버거", category: "burger", emoji: "🍔", rating: 4.6, deliveryTime: "30-40분", deliveryFee: 3000, minOrder: 15000, priceRange: "low",
+              menu: [{ name: "쉑버거", price: 10800 }, { name: "스모크쉑", price: 12800 }, { name: "포토벨로버거", price: 11300 }] },
+            { name: "맥도날드", category: "burger", emoji: "🍔", rating: 4.0, deliveryTime: "20-30분", deliveryFee: 3000, minOrder: 10000, priceRange: "low",
+              menu: [{ name: "빅맥세트", price: 9200 }, { name: "1955버거세트", price: 10200 }, { name: "맥스파이시상하이", price: 9700 }] },
+            
+            // 아시안
+            { name: "포메인", category: "asian", emoji: "🍜", rating: 4.4, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 15000, priceRange: "low",
+              menu: [{ name: "양지쌀국수", price: 11000 }, { name: "소고기쌀국수", price: 12000 }, { name: "분보남보", price: 13000 }] },
+            { name: "타이베트남", category: "asian", emoji: "🍜", rating: 4.5, deliveryTime: "35-45분", deliveryFee: 2500, minOrder: 17000, priceRange: "mid",
+              menu: [{ name: "팟타이", price: 12000 }, { name: "똠양꿍", price: 14000 }, { name: "나시고렝", price: 11000 }] },
+            
+            // 카페
+            { name: "스타벅스", category: "cafe", emoji: "☕", rating: 4.3, deliveryTime: "25-35분", deliveryFee: 2500, minOrder: 10000, priceRange: "low",
+              menu: [{ name: "아이스아메리카노", price: 4500 }, { name: "카페라떼", price: 5000 }, { name: "치킨클럽샌드위치", price: 7900 }] },
+            { name: "투썸플레이스", category: "cafe", emoji: "☕", rating: 4.4, deliveryTime: "30-40분", deliveryFee: 2500, minOrder: 12000, priceRange: "low",
+              menu: [{ name: "스트로베리초콜릿", price: 7000 }, { name: "뉴욕치즈케이크", price: 6500 }, { name: "샌드위치세트", price: 11000 }] },
+            
+            // 분식
+            { name: "김밥천국", category: "snack", emoji: "🍙", rating: 4.1, deliveryTime: "20-30분", deliveryFee: 2000, minOrder: 10000, priceRange: "low",
+              menu: [{ name: "김밥", price: 3500 }, { name: "라면", price: 4500 }, { name: "돈까스", price: 8000 }] },
+            { name: "신전떡볶이", category: "snack", emoji: "🍢", rating: 4.3, deliveryTime: "25-35분", deliveryFee: 2500, minOrder: 12000, priceRange: "low",
+              menu: [{ name: "신전떡볶이", price: 4000 }, { name: "치즈떡볶이", price: 5500 }, { name: "신전튀김", price: 3000 }] },
+            
+            // 디저트
+            { name: "배스킨라빈스", category: "dessert", emoji: "🍦", rating: 4.5, deliveryTime: "30-40분", deliveryFee: 3000, minOrder: 15000, priceRange: "low",
+              menu: [{ name: "파인트", price: 9800 }, { name: "패밀리", price: 23000 }, { name: "쿼터", price: 17000 }] },
+            { name: "던킨도너츠", category: "dessert", emoji: "🍩", rating: 4.2, deliveryTime: "25-35분", deliveryFee: 2500, minOrder: 10000, priceRange: "low",
+              menu: [{ name: "도넛세트 6개", price: 10000 }, { name: "도넛세트 12개", price: 18000 }, { name: "커피+도넛", price: 6000 }] },
+            
+            // 야식
+            { name: "노랑통닭", category: "midnight", emoji: "🌙", rating: 4.4, deliveryTime: "30-40분", deliveryFee: 2000, minOrder: 15000, priceRange: "mid",
+              menu: [{ name: "노랑통닭", price: 17000 }, { name: "간장통닭", price: 18000 }, { name: "양념통닭", price: 18000 }] },
+            { name: "족발야시장", category: "midnight", emoji: "🌙", rating: 4.5, deliveryTime: "40-50분", deliveryFee: 3000, minOrder: 25000, priceRange: "high",
+              menu: [{ name: "족발(소)", price: 28000 }, { name: "보쌈(소)", price: 28000 }, { name: "막국수", price: 8000 }] }
+        ];
+
+        // 카테고리 토글
+        function toggleCategory(element) {
+            element.classList.toggle('active');
+            const category = element.dataset.category;
+            
+            if (element.classList.contains('active')) {
+                selectedCategories.push(category);
+            } else {
+                selectedCategories = selectedCategories.filter(c => c !== category);
+            }
+        }
+
+        // 가격대 토글
+        function togglePrice(element) {
+            // 기존 선택 제거
+            document.querySelectorAll('[data-price]').forEach(el => el.classList.remove('active'));
+            
+            // 새로운 선택
+            element.classList.toggle('active');
+            selectedPrice = element.classList.contains('active') ? element.dataset.price : null;
+        }
+
+        // 랜덤 레스토랑 선택
+        function getRandomRestaurant() {
+            const button = document.getElementById('randomBtn');
+            button.classList.add('spinning');
+            button.innerHTML = '<span class="spinner">⏳</span><span>고르는 중...</span>';
+            
+            // 필터링
+            let filtered = restaurants;
+            
+            if (selectedCategories.length > 0) {
+                filtered = filtered.filter(r => selectedCategories.includes(r.category));
+            }
+            
+            if (selectedPrice) {
+                filtered = filtered.filter(r => r.priceRange === selectedPrice);
+            }
+            
+            if (filtered.length === 0) {
+                setTimeout(() => {
+                    button.classList.remove('spinning');
+                    button.innerHTML = '<span>🎲</span><span>오늘의 메뉴 정하기!</span>';
+                    alert('선택한 조건에 맞는 레스토랑이 없습니다.');
+                }, 500);
+                return;
+            }
+            
+            // 랜덤 선택
+            setTimeout(() => {
+                const random = filtered[Math.floor(Math.random() * filtered.length)];
+                showResult(random);
+                button.classList.remove('spinning');
+                button.innerHTML = '<span>🎲</span><span>오늘의 메뉴 정하기!</span>';
+            }, 1500);
+        }
+
+        // 결과 표시
+        function showResult(restaurant) {
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <div class="restaurant-result">
+                    <div class="result-emoji">${restaurant.emoji}</div>
+                    <h2 class="restaurant-name">${restaurant.name}</h2>
+                    <span class="restaurant-badge">${getCategoryName(restaurant.category)}</span>
+                </div>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">평점</div>
+                        <div class="info-value">⭐ ${restaurant.rating}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">배달시간</div>
+                        <div class="info-value">${restaurant.deliveryTime}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">배달료</div>
+                        <div class="info-value">${restaurant.deliveryFee.toLocaleString()}원</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">최소주문</div>
+                        <div class="info-value">${restaurant.minOrder.toLocaleString()}원</div>
+                    </div>
+                </div>
+                
+                <div class="menu-section">
+                    <div class="menu-title">추천 메뉴</div>
+                    ${restaurant.menu.map(item => `
+                        <div class="menu-item">
+                            <span class="menu-name">${item.name}</span>
+                            <span class="menu-price">${item.price.toLocaleString()}원</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn btn-secondary" onclick="getRandomRestaurant()">다시 고르기</button>
+                    <button class="action-btn btn-primary" onclick="addToFavorites('${restaurant.name}')">즐겨찾기 추가</button>
+                </div>
+            `;
+            
+            // 히스토리에 추가
+            addToHistory(restaurant);
+            
+            // 모달 표시
+            document.getElementById('resultModal').classList.add('show');
+        }
+
+        // 히스토리 추가
+        function addToHistory(restaurant) {
+            const now = new Date();
+            const item = {
+                ...restaurant,
+                timestamp: now.toISOString(),
+                timeString: `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`
+            };
+            
+            history.unshift(item);
+            if (history.length > 20) history.pop();
+            localStorage.setItem('foodHistory', JSON.stringify(history));
+            updateHistoryView();
+        }
+
+        // 히스토리 뷰 업데이트
+        function updateHistoryView() {
+            const historyList = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <div class="empty-text">아직 추천받은 메뉴가 없어요</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <div class="history-info">
+                        <div class="history-restaurant">${item.emoji} ${item.name}</div>
+                        <div class="history-details">${getCategoryName(item.category)} • ⭐ ${item.rating}</div>
+                    </div>
+                    <div class="history-time">${item.timeString}</div>
+                </div>
+            `).join('');
+        }
+
+        // 즐겨찾기 추가
+        function addToFavorites(name) {
+            const restaurant = restaurants.find(r => r.name === name);
+            if (restaurant && !favorites.find(f => f.name === name)) {
+                favorites.push(restaurant);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                updateFavoritesView();
+                alert('즐겨찾기에 추가되었습니다!');
+            }
+        }
+
+        // 즐겨찾기 뷰 업데이트
+        function updateFavoritesView() {
+            const favoritesList = document.getElementById('favoritesList');
+            
+            if (favorites.length === 0) {
+                favoritesList.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-icon">⭐</div>
+                        <div class="empty-text">즐겨찾기가 비어있어요</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            favoritesList.innerHTML = favorites.map(item => `
+                <div class="favorite-card" onclick="showResult(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    <div class="favorite-emoji">${item.emoji}</div>
+                    <div class="favorite-name">${item.name}</div>
+                    <div class="favorite-category">${getCategoryName(item.category)}</div>
+                </div>
+            `).join('');
+        }
+
+        // 탭 전환
+        function switchTab(tabName) {
+            // 탭 버튼 업데이트
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 탭 컨텐츠 업데이트
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // 랜덤 버튼 표시/숨김
+            document.querySelector('.random-section').style.display = tabName === 'random' ? 'block' : 'none';
+        }
+
+        // 카테고리 이름 변환
+        function getCategoryName(category) {
+            const names = {
+                'korean': '한식', 'chinese': '중식', 'japanese': '일식',
+                'western': '양식', 'chicken': '치킨', 'pizza': '피자',
+                'burger': '버거', 'asian': '아시안', 'cafe': '카페',
+                'snack': '분식', 'dessert': '디저트', 'midnight': '야식'
+            };
+            return names[category] || category;
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('resultModal').classList.remove('show');
+        }
+
+        // 메뉴 토글
+        function toggleMenu() {
+            const menu = document.getElementById('sideMenu');
+            const overlay = document.querySelector('.menu-overlay');
+            
+            menu.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        // 위치 가져오기
+        function getCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        alert('현재 위치를 가져왔습니다!');
+                        // 실제로는 여기서 역지오코딩 API를 사용
+                    },
+                    error => {
+                        alert('위치 정보를 가져올 수 없습니다.');
+                    }
+                );
+            }
+        }
+
+        // 앱 공유
+        function shareApp() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '오늘뭐먹지',
+                    text: '배달음식 랜덤 추천 서비스',
+                    url: window.location.href
+                });
+            } else {
+                alert('URL이 복사되었습니다!');
+                navigator.clipboard.writeText(window.location.href);
+            }
+        }
+
+        // 히스토리 삭제
+        function clearHistory() {
+            if (confirm('모든 히스토리를 삭제하시겠습니까?')) {
+                history = [];
+                localStorage.setItem('foodHistory', JSON.stringify(history));
+                updateHistoryView();
+                toggleMenu();
+            }
+        }
+
+        // 즐겨찾기 초기화
+        function clearFavorites() {
+            if (confirm('모든 즐겨찾기를 삭제하시겠습니까?')) {
+                favorites = [];
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                updateFavoritesView();
+                toggleMenu();
+            }
+        }
+
+        // 앱 정보
+        function showAbout() {
+            alert('오늘뭐먹지 v1.0\n\n배달음식 선택장애를 해결해드립니다!\n\n© 2024 오늘뭐먹지');
+            toggleMenu();
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHistoryView();
+            updateFavoritesView();
+        });
+
+        // PWA 등록
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
